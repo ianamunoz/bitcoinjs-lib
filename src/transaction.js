@@ -5,11 +5,14 @@ var opcodes = require('./opcodes')
 var typeforce = require('typeforce')
 var types = require('./types')
 
+var JSDescription = require('./jsdescription')
+
 function Transaction () {
   this.version = 1
   this.locktime = 0
   this.ins = []
   this.outs = []
+  this.jss = []
 }
 
 Transaction.DEFAULT_SEQUENCE = 0xffffffff
@@ -47,6 +50,12 @@ Transaction.fromBuffer = function (buffer, __noStrict) {
     return readSlice(readVarInt())
   }
 
+  function readJSDescription () {
+    var jsdesc = JSDescription.fromBuffer(buffer.slice(offset), true)
+    offset += jsdesc.byteLength()
+    return jsdesc
+  }
+
   var tx = new Transaction()
   tx.version = readUInt32()
 
@@ -69,6 +78,18 @@ Transaction.fromBuffer = function (buffer, __noStrict) {
   }
 
   tx.locktime = readUInt32()
+
+  if (tx.version >= 2) {
+    var vjoinsplitLen = readVarInt()
+    for (i = 0; i < vjoinsplitLen; ++i) {
+      var jsdesc = readJSDescription()
+      tx.jss.push(jsdesc)
+    }
+    if (vjoinsplitLen > 0) {
+      tx.joinSplitPubKey = readSlice(32)
+      tx.joinSplitSig = readSlice(64)
+    }
+  }
 
   if (__noStrict) return tx
   if (offset !== buffer.length) throw new Error('Transaction has unexpected data')
@@ -119,6 +140,16 @@ Transaction.prototype.addOutput = function (scriptPubKey, value) {
   }) - 1)
 }
 
+Transaction.prototype.addJoinSplit = function (jsdesc) {
+  // TODO
+  /*
+  typeforce(types.tuple(JSDescription), arguments)
+  */
+
+  // Add the JoinSplit and return the JoinSplit's index
+  return (this.jss.push(jsdesc) - 1)
+}
+
 Transaction.prototype.byteLength = function () {
   function scriptSize (someScript) {
     var length = someScript.length
@@ -126,8 +157,18 @@ Transaction.prototype.byteLength = function () {
     return bufferutils.varIntSize(length) + length
   }
 
+  var jsLen = 0
+  if (this.version >= 2) {
+    jsLen = (
+      bufferutils.varIntSize(this.jss.length) +
+      this.jss.reduce(function (sum, jsdesc) { return sum + jsdesc.byteLength() }, 0) +
+      (this.jss.length > 0 ? 12 : 0)
+    )
+  }
+
   return (
     8 +
+    jsLen +
     bufferutils.varIntSize(this.ins.length) +
     bufferutils.varIntSize(this.outs.length) +
     this.ins.reduce(function (sum, input) { return sum + 40 + scriptSize(input.script) }, 0) +
@@ -155,6 +196,16 @@ Transaction.prototype.clone = function () {
       value: txOut.value
     }
   })
+
+  if (this.version >= 2) {
+    newTx.jss = this.jss.map(function (jsdesc) {
+      return jsdesc.clone()
+    })
+    if (this.jss.length > 0) {
+      newTx.joinSplitPubKey = this.joinSplitPubKey
+      newTx.joinSplitSig = this.joinSplitSig
+    }
+  }
 
   return newTx
 }
@@ -298,6 +349,17 @@ Transaction.prototype.toBuffer = function () {
   })
 
   writeUInt32(this.locktime)
+
+  if (this.version >= 2) {
+    writeVarInt(this.jss.length)
+    this.jss.forEach(function (jsdesc) {
+      writeSlice(jsdesc.toBuffer())
+    })
+    if (this.jss.length > 0) {
+      writeSlice(this.joinSplitPubKey)
+      writeSlice(this.joinSplitSig)
+    }
+  }
 
   return buffer
 }

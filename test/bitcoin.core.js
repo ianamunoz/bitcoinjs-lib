@@ -10,7 +10,9 @@ var base58_keys_valid = require('./fixtures/core/base58_keys_valid.json')
 var blocks_valid = require('./fixtures/core/blocks.json')
 var sig_canonical = require('./fixtures/core/sig_canonical.json')
 var sig_noncanonical = require('./fixtures/core/sig_noncanonical.json')
+/* needs regeneration
 var sighash = require('./fixtures/core/sighash.json')
+*/
 var tx_valid = require('./fixtures/core/tx_valid.json')
 
 describe('Bitcoin-core', function () {
@@ -192,6 +194,7 @@ describe('Bitcoin-core', function () {
   })
 
   // sighash
+  /* needs regeneration
   describe('Transaction', function () {
     sighash.forEach(function (f) {
       // Objects that are only a single string are ignored
@@ -226,6 +229,7 @@ describe('Bitcoin-core', function () {
       })
     })
   })
+  */
 
   describe('ECSignature.parseScriptSignature', function () {
     sig_canonical.forEach(function (hex) {

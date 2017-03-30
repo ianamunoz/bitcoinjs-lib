@@ -4,12 +4,16 @@ var bufferutils = require('./bufferutils')
 var opcodes = require('./opcodes')
 var typeforce = require('typeforce')
 var types = require('./types')
+var zcashPrimitives = require('zcash-primitives')
+
+var TransactionHelper = zcashPrimitives.TransactionHelper
 
 function Transaction () {
   this.version = 1
   this.locktime = 0
   this.ins = []
   this.outs = []
+  this.txHelper = new TransactionHelper()
 }
 
 Transaction.DEFAULT_SEQUENCE = 0xffffffff
@@ -70,6 +74,9 @@ Transaction.fromBuffer = function (buffer, __noStrict) {
 
   tx.locktime = readUInt32()
 
+  tx.txHelper = TransactionHelper.fromTransactionBuffer(tx.version, buffer.slice(offset))
+  offset += tx.txHelper.byteLength(tx.version)
+
   if (__noStrict) return tx
   if (offset !== buffer.length) throw new Error('Transaction has unexpected data')
 
@@ -128,6 +135,7 @@ Transaction.prototype.byteLength = function () {
 
   return (
     8 +
+    this.txHelper.byteLength(this.version) +
     bufferutils.varIntSize(this.ins.length) +
     bufferutils.varIntSize(this.outs.length) +
     this.ins.reduce(function (sum, input) { return sum + 40 + scriptSize(input.script) }, 0) +
@@ -155,6 +163,8 @@ Transaction.prototype.clone = function () {
       value: txOut.value
     }
   })
+
+  newTx.txHelper = this.txHelper.clone()
 
   return newTx
 }
@@ -298,6 +308,8 @@ Transaction.prototype.toBuffer = function () {
   })
 
   writeUInt32(this.locktime)
+
+  writeSlice(this.txHelper.toBuffer(this.version))
 
   return buffer
 }

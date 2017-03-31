@@ -11,6 +11,10 @@ function Hash160bit (value) { return nBuffer(value, 20) }
 function Hash256bit (value) { return nBuffer(value, 32) }
 function Buffer256bit (value) { return nBuffer(value, 32) }
 
+function Buffer252bit (value) {
+  return Buffer256bit(value) && (value[0] & 0x0f) === value[0]
+}
+
 var UINT53_MAX = Math.pow(2, 53) - 1
 function UInt2 (value) { return (value & 3) === value }
 function UInt8 (value) { return (value & 0xff) === value }
@@ -22,9 +26,30 @@ function UInt53 (value) {
     Math.floor(value) === value
 }
 
+function BoolNum (value) {
+  return typeforce.Number(value) &&
+    value >= 0 &&
+    value <= 1
+}
+
 // external dependent types
 var BigInt = typeforce.quacksLike('BigInteger')
 var ECPoint = typeforce.quacksLike('Point')
+
+// exposed, external Zcash API
+var PaymentAddress = typeforce.compile({
+  a_pk: Buffer256bit,
+  pk_enc: Buffer256bit
+})
+var SpendingKey = typeforce.compile({
+  a_sk: Buffer252bit
+})
+var Note = typeforce.compile({
+  a_pk: Buffer256bit,
+  value: UInt53,
+  rho: Buffer256bit,
+  r: Buffer256bit
+})
 
 // exposed, external API
 var ECSignature = typeforce.compile({ r: BigInt, s: BigInt })
@@ -43,12 +68,17 @@ var Network = typeforce.compile({
 // extend typeforce types with ours
 var types = {
   BigInt: BigInt,
+  BoolNum: BoolNum,
+  Buffer252bit: Buffer252bit,
   Buffer256bit: Buffer256bit,
   ECPoint: ECPoint,
   ECSignature: ECSignature,
   Hash160bit: Hash160bit,
   Hash256bit: Hash256bit,
   Network: Network,
+  Note: Note,
+  PaymentAddress: PaymentAddress,
+  SpendingKey: SpendingKey,
   UInt2: UInt2,
   UInt8: UInt8,
   UInt32: UInt32,

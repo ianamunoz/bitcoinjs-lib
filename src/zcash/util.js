@@ -1,7 +1,7 @@
 'use strict'
 
 var prf = require('./prf')
-var sodium = require('libsodium-wrappers')
+var sodium = require('libsodium-wrappers-sumo')
 var typeforce = require('typeforce')
 var types = require('../types')
 

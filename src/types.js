@@ -50,6 +50,26 @@ var Note = typeforce.compile({
   rho: Buffer256bit,
   r: Buffer256bit
 })
+var ZCIncrementalMerkleTree = typeforce.compile({
+  left: typeforce.maybe(Hash256bit),
+  right: typeforce.maybe(Hash256bit),
+  parents: [typeforce.maybe(Hash256bit)]
+})
+var ZCIncrementalWitness = typeforce.compile({
+  tree: ZCIncrementalMerkleTree,
+  filled: [Hash256bit],
+  cursor: typeforce.maybe(ZCIncrementalMerkleTree)
+})
+var JSInput = typeforce.compile({
+  witness: ZCIncrementalWitness,
+  note: Note,
+  key: SpendingKey
+})
+var JSOutput = typeforce.compile({
+  addr: PaymentAddress,
+  value: UInt53,
+  memo: typeforce.Buffer
+})
 
 // exposed, external API
 var ECSignature = typeforce.compile({ r: BigInt, s: BigInt })
@@ -75,6 +95,8 @@ var types = {
   ECSignature: ECSignature,
   Hash160bit: Hash160bit,
   Hash256bit: Hash256bit,
+  JSInput: JSInput,
+  JSOutput: JSOutput,
   Network: Network,
   Note: Note,
   PaymentAddress: PaymentAddress,
@@ -82,7 +104,8 @@ var types = {
   UInt2: UInt2,
   UInt8: UInt8,
   UInt32: UInt32,
-  UInt53: UInt53
+  UInt53: UInt53,
+  ZCIncrementalWitness: ZCIncrementalWitness
 }
 
 for (var typeName in typeforce) {

@@ -1,9 +1,32 @@
 'use strict'
 
+var blake2b = require('./zcash/blake2b')
 var bufferutils = require('./bufferutils')
+var prf = require('./zcash/prf')
+var typeforce = require('typeforce')
+var types = require('./types')
 var zconst = require('./zcash/const')
+var zutil = require('./zcash/util')
 
+var JSProofWitness = require('./zcash/proof_witness')
+var NotePlaintext = require('./zcash/note_plaintext')
+var ZCNoteEncryption = require('./zcash/note_encryption')
 var ZCProof = require('./zcash/proof')
+
+function h_sig (randomSeed, nullifiers, pubKeyHash) {
+  typeforce(types.tuple(
+    types.Buffer256bit,
+    types.arrayOf(types.Hash256bit),
+    types.Hash256bit
+  ), arguments)
+
+  return new Buffer(blake2b.crypto_generichash_blake2b_salt_personal(
+    32,
+    Buffer.concat([randomSeed].concat(nullifiers).concat([pubKeyHash])),
+    undefined, // No key.
+    undefined, // No salt.
+    'ZcashComputehSig'))
+}
 
 function JSDescription () {
   this.nullifiers = []
@@ -150,6 +173,121 @@ JSDescription.prototype.toBuffer = function () {
 
 JSDescription.prototype.toHex = function () {
   return this.toBuffer().toString('hex')
+}
+
+JSDescription.prototype.h_sig = function (joinSplitPubKey) {
+  return h_sig(this.randomSeed, this.nullifiers, joinSplitPubKey)
+}
+
+JSDescription.withWitness = function (inputs, outputs, pubKeyHash, vpub_old, vpub_new, rt) {
+  typeforce(types.tuple(
+    types.arrayOf(types.JSInput),
+    types.arrayOf(types.JSOutput),
+    types.Hash256bit,
+    types.UInt53,
+    types.UInt53,
+    types.Hash256bit
+  ), arguments)
+
+  if (inputs.length !== zconst.ZC_NUM_JS_INPUTS) {
+    throw new Error(`invalid number of inputs (found ${inputs.length}, expected ${zconst.ZC_NUM_JS_INPUTS}`)
+  }
+  if (outputs.length !== zconst.ZC_NUM_JS_OUTPUTS) {
+    throw new Error(`invalid number of inputs (found ${outputs.length}, expected ${zconst.ZC_NUM_JS_OUTPUTS}`)
+  }
+
+  var jsdesc = new JSDescription()
+  jsdesc.vpub_old = vpub_old
+  jsdesc.vpub_new = vpub_new
+  jsdesc.anchor = rt
+
+  var lhs_value = vpub_old
+  var rhs_value = vpub_new
+
+  inputs.forEach(function (input) {
+    // Sanity checks of input
+
+    // If note has nonzero value
+    if (input.note.value !== 0) {
+      // The witness root must equal the input root.
+      if (input.witness.root() !== rt) {
+        throw new Error('joinsplit not anchored to the correct root')
+      }
+
+      // The tree must witness the correct element
+      if (input.note.cm() !== input.witness.element()) {
+        throw new Error('witness of wrong element for joinsplit input')
+      }
+    }
+
+    // Ensure we have the key to this note.
+    if (input.note.a_pk.toString('hex') !== input.key.address().a_pk.toString('hex')) {
+      throw new Error('input note not authorized to spend with given key')
+    }
+
+    // Balance must be sensical
+    typeforce(types.UInt53, input.note.value)
+    lhs_value += input.note.value
+    typeforce(types.UInt53, lhs_value)
+
+    // Compute nullifier of input
+    jsdesc.nullifiers.push(input.nullifier())
+  })
+
+  // Sample randomSeed
+  jsdesc.randomSeed = zutil.random_uint256()
+
+  // Compute h_sig
+  var hSig = jsdesc.h_sig(pubKeyHash)
+
+  // Sample phi
+  var phi = zutil.random_uint252()
+
+  // Compute notes for outputs
+  var notes = []
+  outputs.forEach(function (output, i) {
+    // Sanity checks of output
+    typeforce(types.UInt53, output.value)
+    rhs_value += output.value
+    typeforce(types.UInt53, rhs_value)
+
+    // Sample r
+    var r = zutil.random_uint256()
+
+    notes.push(output.note(phi, r, i, hSig))
+  })
+
+  if (lhs_value !== rhs_value) {
+    throw new Error('invalid joinsplit balance')
+  }
+
+  // Compute the output commitments
+  notes.forEach(function (note) {
+    jsdesc.commitments.push(note.cm())
+  })
+
+  // Encrypt the ciphertexts containing the note
+  // plaintexts to the recipients of the value.
+  var encryptor = new ZCNoteEncryption(hSig)
+
+  notes.forEach(function (note, i) {
+    var pt = new NotePlaintext(note, outputs[i].memo)
+
+    jsdesc.ciphertexts.push(pt.encrypt(encryptor, outputs[i].addr.pk_enc))
+  })
+
+  jsdesc.ephemeralKey = encryptor.epk
+
+  // Authenticate hSig with each of the input
+  // spending keys, producing macs which protect
+  // against malleability.
+  inputs.forEach(function (input, i) {
+    jsdesc.macs.push(prf.PRF_pk(inputs[i].key.a_sk, i, hSig))
+  })
+
+  jsdesc.witness = new JSProofWitness(phi, rt, hSig, inputs, notes, vpub_old, vpub_new)
+
+  return jsdesc
 }
 
 module.exports = JSDescription

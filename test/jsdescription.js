@@ -6,6 +6,7 @@ var JSDescription = require('../src/jsdescription')
 var ZCProof = require('../src/zcash/proof')
 
 var fixtures = require('./fixtures/jsdescription')
+var hSigFixtures = require('./fixtures/hsig')
 
 describe('JSDescription', function () {
   function fromRaw (raw) {
@@ -81,6 +82,22 @@ describe('JSDescription', function () {
 
       it('should not have reference equality', function () {
         assert.notEqual(actual, expected)
+      })
+    })
+  })
+
+  describe('hSig', function () {
+    hSigFixtures.valid.forEach(function (f) {
+      it('equals ' + f.hex, function () {
+        var jsdesc = new JSDescription()
+        jsdesc.randomSeed = [].reverse.call(new Buffer(f.randomSeed, 'hex'))
+        f.nullifiers.forEach(function (nullifier) {
+          jsdesc.nullifiers.push([].reverse.call(new Buffer(nullifier, 'hex')))
+        })
+
+        var actual = jsdesc.h_sig([].reverse.call(new Buffer(f.pubKeyHash, 'hex')))
+        var expected = [].reverse.call(new Buffer(f.hex, 'hex'))
+        assert.strictEqual(new Buffer(actual).toString('hex'), expected.toString('hex'))
       })
     })
   })

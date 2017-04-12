@@ -126,6 +126,18 @@ Transaction.prototype.addOutput = function (scriptPubKey, value) {
   }) - 1)
 }
 
+Transaction.prototype.addShieldedOutput = function (addr, value, memo) {
+  return this.txHelper.addShieldedOutput(addr, value, memo)
+}
+
+Transaction.prototype.setAnchor = function (anchor) {
+  this.txHelper.setAnchor(anchor)
+}
+
+Transaction.prototype.getProofs = function (provingServiceUri, callbackfn) {
+  this.txHelper.getProofs(provingServiceUri, callbackfn)
+}
+
 Transaction.prototype.byteLength = function () {
   function scriptSize (someScript) {
     var length = someScript.length

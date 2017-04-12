@@ -6,6 +6,7 @@ var networks = require('./networks')
 var ops = require('./opcodes')
 var typeforce = require('typeforce')
 var types = require('./types')
+var zaddress = require('zcash-primitives').address
 
 var ECPair = require('./ecpair')
 var ECSignature = require('./ecsignature')
@@ -275,6 +276,38 @@ TransactionBuilder.prototype.addOutput = function (scriptPubKey, value) {
   return this.tx.addOutput(scriptPubKey, value)
 }
 
+TransactionBuilder.prototype.addShieldedOutput = function (address, value, memo) {
+  // Attempt to get a PaymentAddress if it's a base58 address string
+  if (typeof address === 'string') {
+    var versionMap = {
+      0x169a: zaddress.PaymentAddress
+    }
+    address = zaddress.fromZAddress(address, versionMap)
+  }
+
+  if (typeof memo === 'string') {
+    try {
+      memo = new Buffer(memo, 'hex')
+    } catch (error) {
+      memo = new Buffer(memo)
+    }
+  }
+
+  return this.tx.addShieldedOutput(address, value, memo)
+}
+
+TransactionBuilder.prototype.setAnchor = function (anchor) {
+  if (typeof anchor === 'string') {
+    anchor = new Buffer(anchor, 'hex')
+  }
+
+  this.tx.setAnchor(anchor)
+}
+
+TransactionBuilder.prototype.getProofs = function (provingServiceUri, callbackfn) {
+  this.tx.getProofs(provingServiceUri, callbackfn)
+}
+
 TransactionBuilder.prototype.build = function () {
   return this.__build(false)
 }
@@ -290,8 +323,8 @@ var canBuildTypes = {
 
 TransactionBuilder.prototype.__build = function (allowIncomplete) {
   if (!allowIncomplete) {
-    if (!this.tx.ins.length) throw new Error('Transaction has no inputs')
-    if (!this.tx.outs.length) throw new Error('Transaction has no outputs')
+    if (!this.tx.ins.length && !this.tx.txHelper.numJoinSplits(this.tx.version)) throw new Error('Transaction has no inputs')
+    if (!this.tx.outs.length && !this.tx.txHelper.numJoinSplits(this.tx.version)) throw new Error('Transaction has no outputs')
   }
 
   var tx = this.tx.clone()

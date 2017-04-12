@@ -3,8 +3,8 @@
 var assert = require('assert')
 var bcrypto = require('../src/crypto')
 var ecdsa = require('../src/ecdsa')
-var message = require('../src/message')
-var networks = require('../src/networks')
+// var message = require('../src/message')
+// var networks = require('../src/networks')
 var sinon = require('sinon')
 
 var BigInteger = require('bigi')
@@ -97,8 +97,9 @@ describe('ecdsa', function () {
       })
     })
 
+/*
     describe('with i ∈ {0,1,2,3}', function () {
-      var hash = message.magicHash('1111', networks.bitcoin)
+      var hash = message.magicHash('1111', networks.zcash)
       var e = BigInteger.fromBuffer(hash)
 
       var signatureBuffer = new Buffer('INcvXVVEFyIfHLbDX+xoxlKFn3Wzj9g0UbhObXdMq+YMKC252o5RHFr0/cKdQe1WsBLUBi4morhgZ77obDJVuV0=', 'base64')
@@ -119,6 +120,7 @@ describe('ecdsa', function () {
         })
       })
     })
+*/
 
     fixtures.invalid.recoverPubKey.forEach(function (f) {
       it('throws on ' + f.description + ' (' + f.exception + ')', function () {

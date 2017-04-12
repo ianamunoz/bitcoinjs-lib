@@ -52,7 +52,7 @@ describe('Bitcoin-core', function () {
 
       if (params.isPrivkey) return
 
-      var network = params.isTestnet ? bitcoin.networks.testnet : bitcoin.networks.bitcoin
+      var network = params.isTestnet ? bitcoin.networks.testnet : bitcoin.networks.zcash
       var version = network[typeMap[params.addrType]]
 
       it('can export ' + expected, function () {
@@ -64,8 +64,8 @@ describe('Bitcoin-core', function () {
   // base58_keys_invalid
   describe('address.fromBase58Check', function () {
     var allowedNetworks = [
-      bitcoin.networks.bitcoin.pubkeyhash,
-      bitcoin.networks.bitcoin.scripthash,
+      bitcoin.networks.zcash.pubkeyhash,
+      bitcoin.networks.zcash.scripthash,
       bitcoin.networks.testnet.pubkeyhash,
       bitcoin.networks.testnet.scripthash
     ]
@@ -92,7 +92,7 @@ describe('Bitcoin-core', function () {
 
       if (!params.isPrivkey) return
 
-      var network = params.isTestnet ? bitcoin.networks.testnet : bitcoin.networks.bitcoin
+      var network = params.isTestnet ? bitcoin.networks.testnet : bitcoin.networks.zcash
       var keyPair = bitcoin.ECPair.fromWIF(string, network)
 
       it('fromWIF imports ' + string, function () {
@@ -109,7 +109,7 @@ describe('Bitcoin-core', function () {
   // base58_keys_invalid
   describe('ECPair.fromWIF', function () {
     var allowedNetworks = [
-      bitcoin.networks.bitcoin,
+      bitcoin.networks.zcash,
       bitcoin.networks.testnet
     ]
 

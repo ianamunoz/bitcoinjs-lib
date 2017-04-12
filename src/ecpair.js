@@ -35,7 +35,7 @@ function ECPair (d, Q, options) {
   }
 
   this.compressed = options.compressed === undefined ? true : options.compressed
-  this.network = options.network || NETWORKS.bitcoin
+  this.network = options.network || NETWORKS.zcash
 }
 
 Object.defineProperty(ECPair.prototype, 'Q', {
@@ -58,7 +58,7 @@ ECPair.fromPublicKeyBuffer = function (buffer, network) {
 }
 
 ECPair.fromWIF = function (string, network) {
-  network = network || NETWORKS.bitcoin
+  network = network || NETWORKS.zcash
   var buffer = bs58check.decode(string)
 
   if (types.Array(network)) {
@@ -98,9 +98,9 @@ ECPair.prototype.getAddress = function () {
   var pubKey = this.getPublicKeyBuffer()
   var pubKeyHash = bcrypto.hash160(pubKey)
 
-  var payload = new Buffer(21)
-  payload.writeUInt8(this.network.pubKeyHash, 0)
-  pubKeyHash.copy(payload, 1)
+  var payload = new Buffer(22)
+  payload.writeUInt16BE(this.network.pubKeyHash, 0)
+  pubKeyHash.copy(payload, 2)
 
   return bs58check.encode(payload)
 }

@@ -62,8 +62,8 @@ describe('TransactionBuilder', function () {
   // constants
   var keyPair = new ECPair(BigInteger.ONE)
   var scripts = [
-    '1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH',
-    '1cMh228HTCiwS8ZsaakH8A8wze1JR5ZsP'
+    't1UYsZVJkLPeMjxEtACvSxfWuNmddpWfxzs',
+    't1JUxhMSGFmzKY5BTp1PsQwG4Ceq642SmnB'
   ].map(function (x) {
     return baddress.toOutputScript(x)
   })
@@ -77,7 +77,7 @@ describe('TransactionBuilder', function () {
   describe('fromTransaction', function () {
     fixtures.valid.build.forEach(function (f) {
       it('builds TransactionBuilder, with ' + f.description, function () {
-        var network = NETWORKS[f.network || 'bitcoin']
+        var network = NETWORKS[f.network || 'zcash']
         var tx = Transaction.fromHex(f.txHex)
         var txb = TransactionBuilder.fromTransaction(tx, network)
 
@@ -198,8 +198,8 @@ describe('TransactionBuilder', function () {
 
     it('throws if address is of the wrong network', function () {
       assert.throws(function () {
-        txb.addOutput('2NGHjvjw83pcVFgMcA7QvSMh2c246rxLVz9', 1000)
-      }, /2NGHjvjw83pcVFgMcA7QvSMh2c246rxLVz9 has no matching Script/)
+        txb.addOutput('t2VbKv1XNH9W7CEMhM9cDVqzKkpGBhiPnv8', 1000)
+      }, /t2VbKv1XNH9W7CEMhM9cDVqzKkpGBhiPnv8 has no matching Script/)
     })
 
     it('add second output after signed first input with SIGHASH_NONE', function () {

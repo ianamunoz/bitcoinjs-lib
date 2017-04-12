@@ -18,6 +18,7 @@ function Buffer252bit (value) {
 var UINT53_MAX = Math.pow(2, 53) - 1
 function UInt2 (value) { return (value & 3) === value }
 function UInt8 (value) { return (value & 0xff) === value }
+function UInt16 (value) { return (value & 0xffff) === value }
 function UInt32 (value) { return (value >>> 0) === value }
 function UInt53 (value) {
   return typeforce.Number(value) &&
@@ -79,9 +80,11 @@ var Network = typeforce.compile({
     public: UInt32,
     private: UInt32
   },
-  pubKeyHash: UInt8,
-  scriptHash: UInt8,
+  pubKeyHash: UInt16,
+  scriptHash: UInt16,
   wif: UInt8,
+  zcPaymentAddress: UInt16,
+  zcSpendingKey: UInt16,
   dustThreshold: UInt53
 })
 
@@ -103,6 +106,7 @@ var types = {
   SpendingKey: SpendingKey,
   UInt2: UInt2,
   UInt8: UInt8,
+  UInt16: UInt16,
   UInt32: UInt32,
   UInt53: UInt53,
   ZCIncrementalWitness: ZCIncrementalWitness

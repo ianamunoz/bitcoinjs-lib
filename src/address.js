@@ -6,17 +6,17 @@ var types = require('./types')
 
 function fromBase58Check (address) {
   var payload = bs58check.decode(address)
-  if (payload.length < 21) throw new TypeError(address + ' is too short')
-  if (payload.length > 21) throw new TypeError(address + ' is too long')
+  if (payload.length < 22) throw new TypeError(address + ' is too short')
+  if (payload.length > 22) throw new TypeError(address + ' is too long')
 
-  var version = payload[0]
-  var hash = payload.slice(1)
+  var version = payload.readUInt16BE(0)
+  var hash = payload.slice(2)
 
   return { hash: hash, version: version }
 }
 
 function fromOutputScript (scriptPubKey, network) {
-  network = network || networks.bitcoin
+  network = network || networks.zcash
 
   if (bscript.isPubKeyHashOutput(scriptPubKey)) return toBase58Check(bscript.compile(scriptPubKey).slice(3, 23), network.pubKeyHash)
   if (bscript.isScriptHashOutput(scriptPubKey)) return toBase58Check(bscript.compile(scriptPubKey).slice(2, 22), network.scriptHash)
@@ -25,17 +25,17 @@ function fromOutputScript (scriptPubKey, network) {
 }
 
 function toBase58Check (hash, version) {
-  typeforce(types.tuple(types.Hash160bit, types.UInt8), arguments)
+  typeforce(types.tuple(types.Hash160bit, types.UInt16), arguments)
 
-  var payload = new Buffer(21)
-  payload.writeUInt8(version, 0)
-  hash.copy(payload, 1)
+  var payload = new Buffer(22)
+  payload.writeUInt16BE(version, 0)
+  hash.copy(payload, 2)
 
   return bs58check.encode(payload)
 }
 
 function toOutputScript (address, network) {
-  network = network || networks.bitcoin
+  network = network || networks.zcash
 
   var decode = fromBase58Check(address)
   if (decode.version === network.pubKeyHash) return bscript.pubKeyHashOutput(decode.hash)

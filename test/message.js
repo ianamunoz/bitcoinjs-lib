@@ -1,5 +1,6 @@
-/* global describe, it */
+/* sglobal describe, it */
 
+/*
 var assert = require('assert')
 var message = require('../src/message')
 var networks = require('../src/networks')
@@ -62,3 +63,4 @@ describe('message', function () {
     })
   })
 })
+*/

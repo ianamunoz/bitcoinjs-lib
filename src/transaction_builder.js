@@ -503,4 +503,8 @@ TransactionBuilder.prototype.sign = function (index, keyPair, redeemScript, hash
   if (!valid) throw new Error('Key pair cannot sign for this input')
 }
 
+TransactionBuilder.prototype.signShielded = function () {
+  this.tx.signShielded()
+}
+
 module.exports = TransactionBuilder

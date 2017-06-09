@@ -138,6 +138,13 @@ Transaction.prototype.getProofs = function (provingServiceUri, callbackfn) {
   this.txHelper.getProofs(provingServiceUri, callbackfn)
 }
 
+Transaction.prototype.signShielded = function () {
+  var self = this
+  this.txHelper.signShielded(function (inIndex, prevOutScript, hashType) {
+    return self.hashForSignature(inIndex, prevOutScript, hashType)
+  })
+}
+
 Transaction.prototype.byteLength = function () {
   function scriptSize (someScript) {
     var length = someScript.length
@@ -181,7 +188,7 @@ Transaction.prototype.clone = function () {
   return newTx
 }
 
-var ONE = new Buffer('0000000000000000000000000000000000000000000000000000000000000001', 'hex')
+var NOT_AN_INPUT = 65535
 var VALUE_UINT64_MAX = new Buffer('ffffffffffffffff', 'hex')
 
 /**
@@ -196,20 +203,18 @@ Transaction.prototype.hashForSignature = function (inIndex, prevOutScript, hashT
   typeforce(types.tuple(types.UInt32, types.Buffer, /* types.UInt8 */ types.Number), arguments)
 
   // https://github.com/bitcoin/bitcoin/blob/master/src/test/sighash_tests.cpp#L29
-  if (inIndex >= this.ins.length) return ONE
+  if (inIndex >= this.ins.length && inIndex != NOT_AN_INPUT) throw new Error('input index is out of range')
 
   var txTmp = this.clone()
 
-  // in case concatenating two scripts ends up with two codeseparators,
-  // or an extra one at the end, this prevents all those possible incompatibilities.
-  var hashScript = bscript.compile(bscript.decompile(prevOutScript).filter(function (x) {
-    return x !== opcodes.OP_CODESEPARATOR
-  }))
+  var hashScript = prevOutScript
   var i
 
   // blank out other inputs' signatures
   txTmp.ins.forEach(function (input) { input.script = EMPTY_SCRIPT })
-  txTmp.ins[inIndex].script = hashScript
+  if (inIndex != NOT_AN_INPUT) {
+    txTmp.ins[inIndex].script = hashScript
+  }
 
   // blank out some of the inputs
   if ((hashType & 0x1f) === Transaction.SIGHASH_NONE) {
@@ -227,7 +232,7 @@ Transaction.prototype.hashForSignature = function (inIndex, prevOutScript, hashT
 
     // only lock-in the txOut payee at same index as txIn
     // https://github.com/bitcoin/bitcoin/blob/master/src/test/sighash_tests.cpp#L60
-    if (nOut >= this.outs.length) return ONE
+    if (nOut >= this.outs.length) throw new Error('no matching output for SIGHASH_SINGLE')
 
     txTmp.outs = txTmp.outs.slice(0, nOut + 1)
 
@@ -254,6 +259,9 @@ Transaction.prototype.hashForSignature = function (inIndex, prevOutScript, hashT
     txTmp.ins[0] = txTmp.ins[inIndex]
     txTmp.ins = txTmp.ins.slice(0, 1)
   }
+
+  // blank out joinSplitSig
+  txTmp.txHelper.joinSplitSig = Buffer.alloc(64)
 
   // serialize and hash
   var buffer = new Buffer(txTmp.byteLength() + 4)
